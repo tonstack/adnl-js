@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/adnl)](https://www.npmjs.com/package/adnl) ![GitHub top language](https://img.shields.io/github/languages/top/tonstack/adnl-js)
 
-ADNL JavaScript implementation.\
+ADNL JavaScript implementation.
 > :warning: Work in progress, API can (and most likely will) be changed! This is not production ready version yet.
 
 ## How to install
