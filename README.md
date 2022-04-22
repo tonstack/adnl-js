@@ -28,6 +28,9 @@ const TL_PARSE_GETTIME = (data: Buffer) => {
 const client = new ADNLClient(ADNL_HOST, ADNL_PORT, ADNL_PUB_KEY)
 
 client.on('connect', () => console.log('on connect'))
+client.on('close', () => console.log('on close'))
+client.on('data', (data: Buffer) => console.log('on data: ', TL_PARSE_GETTIME(data)))
+client.on('error', (error: Error) => console.log('on error', error))
 client.on('ready', () => {
     console.log('on ready')
 
@@ -41,10 +44,6 @@ client.on('ready', () => {
         }
     }, 3000)
 })
-client.on('close', () => console.log('on close'))
-client.on('data', (data: Buffer) => console.log('on data: ', TL_PARSE_GETTIME(data)))
-client.on('error', (error: Error) => console.log('on error', error))
-}
 ```
 
 ## License
