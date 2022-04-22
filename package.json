@@ -39,15 +39,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tonstack/adnl.git"
+    "url": "git+https://github.com/tonstack/adnl-js.git"
   },
   "keywords": [
     "adnl"
   ],
   "bugs": {
-    "url": "https://github.com/tonstack/adnl/issues"
+    "url": "https://github.com/tonstack/adnl-js/issues"
   },
-  "homepage": "https://github.com/tonstack/adnl#readme",
+  "homepage": "https://github.com/tonstack/adnl-js#readme",
   "dependencies": {
     "@tonstack/xed25519": "^0.0.2"
   }
