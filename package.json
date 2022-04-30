@@ -1,6 +1,6 @@
 {
   "name": "adnl",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "ADNL JavaScript implementation",
   "main": "./dist/index.js",
   "scripts": {
