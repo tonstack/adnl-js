@@ -1,8 +1,5 @@
 import EventEmitter from 'events'
-import {
-    Socket as SocketTCP,
-    createConnection
-} from 'net'
+import { Socket as SocketTCP } from 'net'
 import {
     Socket as SocketUDP,
     createSocket
@@ -13,8 +10,11 @@ import {
     Cipher,
     Decipher
 } from 'crypto'
+import {
+    ADNLPacket,
+    PACKET_MIN_SIZE
+} from './packet'
 import { ADNLAESParams } from './params'
-import { ADNLPacket } from './packet'
 import { ADNLAddress } from './address'
 import { ADNLKeys } from './keys'
 
@@ -25,8 +25,10 @@ enum ADNLClientState {
     CLOSED
 }
 
+type ADNLSocketType = 'tcp4' | 'udp4'
+
 interface ADNLClientOptions {
-    type: 'tcp4' | 'udp4'
+    type: ADNLSocketType
 }
 
 interface ADNLClient {
@@ -50,7 +52,13 @@ interface ADNLClient {
 }
 
 class ADNLClient extends EventEmitter {
+    private host: string
+
+    private port: number
+
     private socket: SocketTCP | SocketUDP
+
+    private buffer: Buffer
 
     private address: ADNLAddress
 
@@ -62,21 +70,19 @@ class ADNLClient extends EventEmitter {
 
     private decipher: Decipher
 
-    private _state = ADNLClientState.CONNECTING
+    private _state = ADNLClientState.CLOSED
 
     constructor (host: string, port: number, peerPublicKey: Uint8Array | string, options?: ADNLClientOptions) {
         super()
 
         const { type = 'tcp4' } = options || {}
 
+        this.host = host
+        this.port = port
         this.address = new ADNLAddress(peerPublicKey)
-        this.keys = new ADNLKeys(this.address.publicKey)
-        this.params = new ADNLAESParams()
-        this.cipher = createCipheriv('aes-256-ctr', this.params.txKey, this.params.txNonce)
-        this.decipher = createDecipheriv('aes-256-ctr', this.params.rxKey, this.params.rxNonce)
 
         if (type === 'tcp4') {
-            this.socket = createConnection(({ host, port }))
+            this.socket = new SocketTCP()
                 .on('connect', this.onConnect.bind(this))
                 .on('ready', this.handshake.bind(this))
                 .on('close', this.onClose.bind(this))
@@ -84,12 +90,13 @@ class ADNLClient extends EventEmitter {
                 .on('error', this.onError.bind(this))
         } else if (type === 'udp4') {
             this.socket = createSocket(type)
-                .on('connect', this.onConnect.bind(this))
+                .on('connect', () => {
+                    this.onConnect()
+                    this.handshake()
+                })
                 .on('close', this.onClose.bind(this))
                 .on('message', this.onData.bind(this))
                 .on('error', this.onError.bind(this))
-
-            this.socket.connect(port, host, this.handshake.bind(this))
         } else {
             throw new Error('ADNLClient: Type must be "tcp4" or "udp4"')
         }
@@ -99,6 +106,33 @@ class ADNLClient extends EventEmitter {
         return this._state
     }
 
+    public connect (): void {
+        if (this.state !== ADNLClientState.CLOSED) {
+            return undefined
+        }
+
+        const { host, port } = this
+
+        this.keys = new ADNLKeys(this.address.publicKey)
+        this.params = new ADNLAESParams()
+        this.cipher = createCipheriv('aes-256-ctr', this.params.txKey, this.params.txNonce)
+        this.decipher = createDecipheriv('aes-256-ctr', this.params.rxKey, this.params.rxNonce)
+        this.buffer = Buffer.from([])
+        this._state = ADNLClientState.CONNECTING
+
+        this.socket.connect(port, host)
+    }
+
+    public end (): void {
+        if (this.state === ADNLClientState.CLOSING || this.state === ADNLClientState.CLOSED) {
+            return undefined
+        }
+
+        this.socket instanceof SocketTCP
+            ? this.socket.end()
+            : this.socket.disconnect()
+    }
+
     public write (data: Buffer): void {
         const packet = new ADNLPacket(data)
         const encrypted = this.encrypt(packet.data)
@@ -106,12 +140,6 @@ class ADNLClient extends EventEmitter {
         this.socket instanceof SocketTCP
             ? this.socket.write(encrypted)
             : this.socket.send(encrypted)
-    }
-
-    public end (): void {
-        this.socket instanceof SocketTCP
-            ? this.socket.end()
-            : this.socket.disconnect()
     }
 
     private onConnect () {
@@ -129,18 +157,26 @@ class ADNLClient extends EventEmitter {
     }
 
     private onData (data: Buffer): void {
-        const decrypted = this.decrypt(data)
-        const packet = ADNLPacket.parse(decrypted)
+        this.buffer = Buffer.concat([ this.buffer, this.decrypt(data) ])
 
-        switch (this.state) {
-            case ADNLClientState.CONNECTING:
-                return packet.payload.length === 0
-                    ? this.onReady()
-                    : this.onError(new Error('ADNLClient: Bad handshake.'), true)
-            default:
-                this.emit('data', packet.payload)
+        while (this.buffer.byteLength >= PACKET_MIN_SIZE) {
+            const packet = ADNLPacket.parse(this.buffer)
 
-                return undefined
+            if (packet === null) {
+                break
+            }
+
+            this.buffer = this.buffer.slice(packet.length, this.buffer.byteLength)
+
+            if (this.state === ADNLClientState.CONNECTING) {
+                packet.payload.length !== 0
+                    ? this.onError(new Error('ADNLClient: Bad handshake.'), true)
+                    : this.onReady()
+
+                break
+            }
+
+            this.emit('data', packet.payload)
         }
     }
 

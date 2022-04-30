@@ -1,5 +1,7 @@
 import { randomBytes, createHash } from 'crypto'
 
+const PACKET_MIN_SIZE = 4 + 32 + 32 // size + nonce + hash
+
 class ADNLPacket {
     private _payload: Buffer
 
@@ -38,21 +40,36 @@ class ADNLPacket {
         return Buffer.concat([ this.size, this.nonce, this.payload, this.hash ])
     }
 
-    public static parse (data: Buffer): ADNLPacket {
-        // TODO: pipe data
-        const _size = data.slice(0, 4).readUint32LE(0)
-        const bytes = Array.from(data.slice(4, data.byteLength))
+    public get length (): number {
+        return 4 + 32 + this._payload.length + 32
+    }
 
-        const hash = Buffer.from(bytes.splice(-32))
-        const nonce = Buffer.from(bytes.splice(0, 32))
-        const payload = Buffer.from(bytes)
+    public static parse (data: Buffer): ADNLPacket {
+        const packet = { cursor: 0, data }
+
+        if (packet.data.byteLength < 4) {
+            return null
+        }
+
+        const size = packet.data.slice(0, packet.cursor += 4).readUint32LE(0)
+
+        if (packet.data.byteLength - 4 < size) {
+            return null
+        }
+
+        const nonce = packet.data.slice(packet.cursor, packet.cursor += 32)
+        const payload = packet.data.slice(packet.cursor, packet.cursor += (size - (32 + 32)))
+        const hash = packet.data.slice(packet.cursor, packet.cursor += 32)
 
         if (!hash.equals(createHash('sha256').update(nonce).update(payload).digest())) {
-            throw new Error('Bad packet hash')
+            throw new Error('ADNLPacket: Bad packet hash.')
         }
 
         return new ADNLPacket(payload, nonce)
     }
 }
 
-export { ADNLPacket }
+export {
+    ADNLPacket,
+    PACKET_MIN_SIZE
+}
