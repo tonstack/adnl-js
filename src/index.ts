@@ -1,1 +1,1 @@
-export { ADNLClientBase as ADNLClient } from './client'
+export { ADNLClientWS as ADNLClient } from './client-ws'
