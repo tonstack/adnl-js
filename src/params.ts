@@ -1,4 +1,5 @@
-import { randomBytes, createHash } from 'crypto'
+import { sha256 } from './hash'
+import { randomBytes } from 'tweetnacl'
 
 class ADNLAESParams {
     private _bytes: Uint8Array
@@ -32,9 +33,9 @@ class ADNLAESParams {
     }
 
     public get hash (): Uint8Array {
-        const hash = createHash('sha256')
+        const hash = sha256(this._bytes)
 
-        return new Uint8Array(hash.update(this._bytes).digest())
+        return hash
     }
 }
 

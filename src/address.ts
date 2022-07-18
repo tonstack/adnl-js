@@ -1,4 +1,4 @@
-import { createHash } from 'crypto'
+import { sha256 } from './hash'
 
 class ADNLAddress {
     private _publicKey: Uint8Array
@@ -24,13 +24,10 @@ class ADNLAddress {
     }
 
     public get hash (): Uint8Array {
-        const hash = createHash('sha256')
         const typeEd25519 = new Uint8Array([ 0xc6, 0xb4, 0x13, 0x48 ])
+        const key = new Uint8Array([ ...typeEd25519, ...this._publicKey ])
 
-        hash.update(typeEd25519)
-        hash.update(this._publicKey)
-
-        return new Uint8Array(hash.digest())
+        return sha256(key)
     }
 
     private static isHex (data: any): boolean {

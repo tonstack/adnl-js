@@ -1,4 +1,5 @@
-import { randomBytes, createHash } from 'crypto'
+import { sha256 } from './hash'
+import { randomBytes } from 'tweetnacl'
 
 const PACKET_MIN_SIZE = 4 + 32 + 32 // size + nonce + hash
 
@@ -9,7 +10,7 @@ class ADNLPacket {
 
     constructor (payload: Buffer, nonce: Buffer = Buffer.from(randomBytes(32))) {
         this._payload = payload
-        this._nonce = nonce
+        this._nonce = nonce// Buffer.from('8e561596e259180c85fccccbc30420d3d7e3c6808819aaea8c0e22157601f69f', 'hex')//nonce
     }
 
     public get payload (): Buffer {
@@ -21,10 +22,9 @@ class ADNLPacket {
     }
 
     public get hash (): Buffer {
-        return createHash('sha256')
-            .update(this.nonce)
-            .update(this.payload)
-            .digest()
+        const value = new Uint8Array([ ...this.nonce, ...this.payload  ])
+
+        return Buffer.from(sha256(value))
     }
 
     public get size (): Buffer {
@@ -44,7 +44,7 @@ class ADNLPacket {
         return 4 + 32 + this._payload.length + 32
     }
 
-    public static parse (data: Buffer): ADNLPacket {
+    public static parse (data: Buffer): ADNLPacket | null {
         const packet = { cursor: 0, data }
 
         if (packet.data.byteLength < 4) {
@@ -60,8 +60,9 @@ class ADNLPacket {
         const nonce = packet.data.slice(packet.cursor, packet.cursor += 32)
         const payload = packet.data.slice(packet.cursor, packet.cursor += (size - (32 + 32)))
         const hash = packet.data.slice(packet.cursor, packet.cursor += 32)
+        const target = Buffer.from(sha256(new Uint8Array([ ...nonce, ...payload ])))
 
-        if (!hash.equals(createHash('sha256').update(nonce).update(payload).digest())) {
+        if (!hash.equals(target)) {
             throw new Error('ADNLPacket: Bad packet hash.')
         }
 

@@ -1,26 +1,19 @@
-import { xed25519_ecdh } from '@tonstack/xed25519'
-import { randomBytes } from 'crypto'
+import {
+    getPublicKey,
+    getSharedSecret
+} from '@noble/ed25519'
+import { randomBytes } from 'tweetnacl'
 
 class ADNLKeys {
-    // private _private: Uint8Array
+    private _peer: Uint8Array
 
     private _public: Uint8Array
 
     private _shared: Uint8Array
 
     constructor (peerPublicKey: Uint8Array) {
-        // const clientPrivateKey = new Uint8Array(randomBytes(32))
-        // const keys = xed25519_ecdh(peerPublicKey, clientPrivateKey)
-        const keys = xed25519_ecdh(peerPublicKey)
-
-        // this._private = clientPrivateKey
-        this._public = keys.public
-        this._shared = keys.shared
+        this._peer = peerPublicKey
     }
-
-    // public get private (): Uint8Array {
-    //     return new Uint8Array(this._private)
-    // }
 
     public get public (): Uint8Array {
         return new Uint8Array(this._public)
@@ -28,6 +21,15 @@ class ADNLKeys {
 
     public get shared (): Uint8Array {
         return new Uint8Array(this._shared)
+    }
+
+    public async generate () {
+        const privateKey = randomBytes(32)
+        const publicKey = await getPublicKey(privateKey)
+        const shared = await getSharedSecret(privateKey, this._peer)
+
+        this._public = publicKey
+        this._shared = shared
     }
 }
 
