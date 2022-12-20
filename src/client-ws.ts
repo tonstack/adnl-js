@@ -1,11 +1,11 @@
 import WebSocket from 'isomorphic-ws'
 import {
-    ADNLClientBase,
+    ADNLClient,
     ADNLClientState
 } from './client'
 import { ADNLPacket } from './packet'
 
-class ADNLClientWS extends ADNLClientBase {
+class ADNLClientWS extends ADNLClient {
     private url: string
 
     constructor (url: string, peerPublicKey: Uint8Array | string) {

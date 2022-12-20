@@ -20,7 +20,7 @@ enum ADNLClientState {
     CLOSED
 }
 
-interface ADNLClientBase {
+interface ADNLClient {
     emit(event: 'connect'): boolean
     emit(event: 'ready'): boolean
     emit(event: 'close'): boolean
@@ -40,7 +40,7 @@ interface ADNLClientBase {
     once(event: 'error', listener: (error: Error, close: boolean) => void): this
 }
 
-class ADNLClientBase extends EventEmitter {
+class ADNLClient extends EventEmitter {
     protected socket: any
 
     protected host: string
@@ -191,6 +191,6 @@ class ADNLClientBase extends EventEmitter {
 }
 
 export {
-    ADNLClientBase,
+    ADNLClient,
     ADNLClientState
 }

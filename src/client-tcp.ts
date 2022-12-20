@@ -1,7 +1,7 @@
-import { ADNLClientBase } from './client'
+import { ADNLClient } from './client'
 import { Socket } from 'net'
 
-class ADNLClientTCP extends ADNLClientBase {
+class ADNLClientTCP extends ADNLClient {
     constructor (url: string, peerPublicKey: Uint8Array | string) {
         super(new Socket(), url, peerPublicKey)
 
